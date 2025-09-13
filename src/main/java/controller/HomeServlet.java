@@ -40,23 +40,7 @@ public class HomeServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        StringBuilder jsonInput = new StringBuilder();
-        try (java.io.BufferedReader reader = request.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jsonInput.append(line);
-            }
-        }
-
-// Parse the JSON to get the userInput field
-        String userInput = null;
-        if (jsonInput.length() > 0) {
-            // A simple way to parse a single JSON key-value pair
-            String jsonString = jsonInput.toString();
-            if (jsonString.startsWith("{\"userInput\":\"") && jsonString.endsWith("\"}")) {
-                userInput = jsonString.substring("{\"userInput\":\"".length(), jsonString.length() - 2);
-            }
-        }
+        String userInput = request.getParameter("userInput");
         String correctedText = "";
 
         if (userInput != null && !userInput.trim().isEmpty()) {
@@ -99,7 +83,7 @@ public class HomeServlet extends HttpServlet {
             System.out.println("Prompt sent to Gemini API: " + prompt);
 
             GenerateContentResponse response = client.models.generateContent(
-                    "gemini-2.5-flash",
+                    "gemini-2.5-flash",  // Make sure this is the correct model name
                     prompt,
                     null);
 

@@ -137,17 +137,16 @@
     // Function to update the result in the page
     function updateResult(correctedText) {
         const outputContainer = document.getElementById('outputContainer');
-
         if (correctedText.startsWith('Error:')) {
             showError(correctedText);
             outputContainer.innerHTML = '';
         } else {
-            outputContainer.innerHTML = `
-                    <div class="output-section">
-                        <h3>Corrected text:</h3>
-                        <div class="output-text">${correctedText}</div>
-                    </div>
-                `;
+            // Create the HTML using proper string concatenation
+            outputContainer.innerHTML =
+                '<div class="output-section">' +
+                '<h3>Corrected text:</h3>' +
+                '<div class="output-text">' + correctedText + '</div>' +
+                '</div>';
         }
     }
 
@@ -171,34 +170,27 @@
             // Show loading animation
             showLoading();
 
-            // Create form data
-            const data = { userInput: userInput };
+            // Use URLSearchParams for simple key-value data transfer
+            const params = new URLSearchParams();
+            params.append('userInput', userInput);
 
-            // Send AJAX request with JSON data
+            // Send AJAX request
             fetch('', {
                 method: 'POST',
+                body: params,
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(data)
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             })
                 .then(response => {
-                    console.log('Response status:', response.status);
-                    console.log('Response headers:', Object.fromEntries([...response.headers]));
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     return response.text();
                 })
                 .then(responseText => {
                     console.log('Raw response text:', responseText);
-
-                    // Check if the response looks like HTML (contains HTML tags)
-                    if (responseText.includes('<!DOCTYPE') || responseText.includes('<html') || responseText.trim().startsWith('<')) {
-                        console.error('Received HTML instead of plain text. The servlet may not be detecting AJAX requests properly.');
-                        showError('Server returned HTML instead of text. This may be a configuration issue.');
-                        return;
-                    }
-
-                    // If it's not HTML, treat it as the corrected text
                     updateResult(responseText);
                 })
                 .catch(error => {
