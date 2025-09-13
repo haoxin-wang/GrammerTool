@@ -8,49 +8,56 @@
     <title>${pageTitle}</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
     <style>
-        .grammar-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .input-section, .output-section {
-            margin-bottom: 30px;
-        }
-        textarea {
+        /* Loading animation styles */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            min-height: 150px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-family: inherit;
-            font-size: 16px;
-            resize: vertical;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        .output-text {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #4CAF50;
-            white-space: pre-wrap;
-        }
-        .section-title {
+
+        .loading-text {
+            font-size: 18px;
             color: #333;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Disable form during loading */
+        .form-disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Error message styling */
+        .error-message {
+            color: #d9534f;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
         }
     </style>
 </head>
@@ -77,18 +84,21 @@
 
             <div class="input-section">
                 <h3>Enter your text:</h3>
-                <form action="" method="post">
-                    <textarea name="userInput" placeholder="Type or paste your text here..." required>${userInput != null ? userInput : ''}</textarea>
-                    <button type="submit">Correct Grammar</button>
+                <form id="grammarForm" method="post">
+                    <textarea name="userInput" id="userInput" placeholder="Type or paste your text here..." required>${userInput != null ? userInput : ''}</textarea>
+                    <button type="submit" id="submitButton">Correct Grammar</button>
                 </form>
+                <div id="errorMessage" class="error-message"></div>
             </div>
 
-            <c:if test="${not empty correctedText}">
-                <div class="output-section">
-                    <h3>Corrected text:</h3>
-                    <div class="output-text">${correctedText}</div>
-                </div>
-            </c:if>
+            <div id="outputContainer">
+                <c:if test="${not empty correctedText}">
+                    <div class="output-section">
+                        <h3>Corrected text:</h3>
+                        <div class="output-text">${correctedText}</div>
+                    </div>
+                </c:if>
+            </div>
         </div>
     </section>
 </main>
@@ -97,6 +107,109 @@
     <p>&copy; ${currentYear} Grammar Correction Tool. All rights reserved.</p>
 </footer>
 
-<script src="${pageContext.request.contextPath}/assets/js/script.js"></script>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Processing your request...</div>
+</div>
+
+<script>
+    // Function to show loading animation
+    function showLoading() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('grammarForm').classList.add('form-disabled');
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    // Function to hide loading animation
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('grammarForm').classList.remove('form-disabled');
+    }
+
+    // Function to show error message
+    function showError(message) {
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+
+    // Function to update the result in the page
+    function updateResult(correctedText) {
+        const outputContainer = document.getElementById('outputContainer');
+
+        if (correctedText.startsWith('Error:')) {
+            showError(correctedText);
+            outputContainer.innerHTML = '';
+        } else {
+            outputContainer.innerHTML = `
+                    <div class="output-section">
+                        <h3>Corrected text:</h3>
+                        <div class="output-text">${correctedText}</div>
+                    </div>
+                `;
+        }
+    }
+
+    // Add event listener to form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('grammarForm');
+
+        form.addEventListener('submit', function(event) {
+            // Prevent the default form submission
+            event.preventDefault();
+
+            // Get the input value
+            const userInput = document.getElementById('userInput').value.trim();
+
+            // Validate input
+            if (!userInput) {
+                showError('Please enter some text to correct.');
+                return;
+            }
+
+            // Show loading animation
+            showLoading();
+
+            // Create form data
+            const data = { userInput: userInput };
+
+            // Send AJAX request with JSON data
+            fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', Object.fromEntries([...response.headers]));
+                    return response.text();
+                })
+                .then(responseText => {
+                    console.log('Raw response text:', responseText);
+
+                    // Check if the response looks like HTML (contains HTML tags)
+                    if (responseText.includes('<!DOCTYPE') || responseText.includes('<html') || responseText.trim().startsWith('<')) {
+                        console.error('Received HTML instead of plain text. The servlet may not be detecting AJAX requests properly.');
+                        showError('Server returned HTML instead of text. This may be a configuration issue.');
+                        return;
+                    }
+
+                    // If it's not HTML, treat it as the corrected text
+                    updateResult(responseText);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('An error occurred: ' + error.message);
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        });
+    });
+</script>
 </body>
 </html>

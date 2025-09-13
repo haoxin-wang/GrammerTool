@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
 
 // Google GenAI imports
@@ -39,7 +40,23 @@ public class HomeServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String userInput = request.getParameter("userInput");
+        StringBuilder jsonInput = new StringBuilder();
+        try (java.io.BufferedReader reader = request.getReader()) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                jsonInput.append(line);
+            }
+        }
+
+// Parse the JSON to get the userInput field
+        String userInput = null;
+        if (jsonInput.length() > 0) {
+            // A simple way to parse a single JSON key-value pair
+            String jsonString = jsonInput.toString();
+            if (jsonString.startsWith("{\"userInput\":\"") && jsonString.endsWith("\"}")) {
+                userInput = jsonString.substring("{\"userInput\":\"".length(), jsonString.length() - 2);
+            }
+        }
         String correctedText = "";
 
         if (userInput != null && !userInput.trim().isEmpty()) {
@@ -49,17 +66,28 @@ public class HomeServlet extends HttpServlet {
                 correctedText = "Error: " + e.getMessage();
                 e.printStackTrace();
             }
+        } else {
+            correctedText = "Error: Please provide some text to correct.";
         }
 
-        // Set data for the response
-        request.setAttribute("pageTitle", "Grammar Correction Tool");
-        request.setAttribute("sections", new String[]{"home", "grammar"});
-        request.setAttribute("currentYear", LocalDateTime.now().getYear());
-        request.setAttribute("userInput", userInput);
-        request.setAttribute("correctedText", correctedText);
+        // Check if it's an AJAX request
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
 
-        // Forward to the same JSP page
-        request.getRequestDispatcher("/WEB-INF/views/index.jsp").forward(request, response);
+        if (isAjax) {
+            // For AJAX requests, return plain text response
+            response.setContentType("text/plain");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(correctedText);
+        } else {
+            // For regular requests, set attributes and forward to JSP
+            request.setAttribute("pageTitle", "Grammar Correction Tool");
+            request.setAttribute("sections", new String[]{"home", "grammar"});
+            request.setAttribute("currentYear", LocalDateTime.now().getYear());
+            request.setAttribute("userInput", userInput);
+            request.setAttribute("correctedText", correctedText);
+
+            request.getRequestDispatcher("/WEB-INF/views/index.jsp").forward(request, response);
+        }
     }
 
     private String callGeminiAPI(String text) {
@@ -67,13 +95,28 @@ public class HomeServlet extends HttpServlet {
             String prompt = "Correct the grammar and improve the following text: \"" + text + "\". " +
                     "Return only the corrected text without any additional explanations.";
 
+            // Log the prompt for debugging
+            System.out.println("Prompt sent to Gemini API: " + prompt);
+
             GenerateContentResponse response = client.models.generateContent(
-                    "gemini-2.5-flash", // Using gemini-pro as gemini-2.5-flash might not be available
+                    "gemini-2.5-flash",
                     prompt,
                     null);
 
-            return response.text();
+            String correctedText = response.text();
+
+            // Log the raw response for debugging
+            System.out.println("Gemini API raw response: " + correctedText);
+
+            if (correctedText == null || correctedText.trim().isEmpty()) {
+                return "Error: Gemini API returned an empty response.";
+            }
+
+            return correctedText.trim();
+
         } catch (Exception e) {
+            // Log the full exception for debugging
+            e.printStackTrace();
             return "Error calling Gemini API: " + e.getMessage();
         }
     }
