@@ -61,16 +61,29 @@
         }
 
         /* Word counter styling */
-        .word-counter {
-            text-align: right;
+        .word-counter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
             font-size: 14px;
-            color: #666;
-            margin-top: 5px;
         }
 
-        .word-counter.limit-exceeded {
+        .word-counter {
+            color: #666;
+        }
+
+        .word-counter.near-limit {
+            color: #f0ad4e;
+            font-weight: bold;
+        }
+
+        .word-counter.over-limit {
             color: #d9534f;
             font-weight: bold;
+        }
+
+        .word-limit {
+            color: #666;
         }
 
         /* Text area styling */
@@ -83,6 +96,7 @@
             resize: vertical;
             font-family: inherit;
             font-size: 16px;
+            box-sizing: border-box;
         }
 
         /* Button styling */
@@ -95,6 +109,7 @@
             cursor: pointer;
             font-size: 16px;
             margin-top: 10px;
+            transition: background-color 0.3s;
         }
 
         button:hover {
@@ -126,6 +141,7 @@
             padding: 15px;
             border-radius: 4px;
             border-left: 4px solid #4CAF50;
+            white-space: pre-wrap;
         }
 
         /* Navigation */
@@ -150,6 +166,11 @@
             color: white;
             text-decoration: none;
             font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #4CAF50;
         }
 
         /* Footer */
@@ -158,6 +179,56 @@
             padding: 20px;
             background-color: #f5f5f5;
             margin-top: 40px;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Section titles */
+        .section-title {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .grammar-container {
+                padding: 10px;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            nav li {
+                margin: 5px 0;
+            }
+        }
+
+        /* Progress bar styling */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.3s, background-color 0.3s;
+        }
+
+        .progress-bar.near-limit {
+            background-color: #f0ad4e;
+        }
+
+        .progress-bar.over-limit {
+            background-color: #d9534f;
         }
     </style>
 </head>
@@ -187,7 +258,13 @@
                 <h3>Enter your text:</h3>
                 <form id="grammarForm" method="post">
                     <textarea name="userInput" id="userInput" placeholder="Type or paste your text here (max 1024 words)..." required>${userInput != null ? userInput : ''}</textarea>
-                    <div id="wordCounter" class="word-counter">0/1024 words</div>
+                    <div class="word-counter-container">
+                        <span id="wordCounter" class="word-counter">0 words</span>
+                        <span class="word-limit">Max: 1024 words</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                    </div>
                     <button type="submit" id="submitButton">Correct Grammar</button>
                 </form>
                 <div id="errorMessage" class="error-message"></div>
@@ -228,15 +305,31 @@
         const text = document.getElementById('userInput').value;
         const wordCount = countWords(text);
         const counterElement = document.getElementById('wordCounter');
+        const progressBar = document.getElementById('progressBar');
         const submitButton = document.getElementById('submitButton');
 
-        counterElement.textContent = `${wordCount}/1024 words`;
+        // Calculate percentage for progress bar (capped at 100%)
+        const percentage = Math.min((wordCount / 1024) * 100, 100);
+        progressBar.style.width = percentage + '%';
+
+        // Update counter text with exact count
+        counterElement.textContent = wordCount + ' words';
+
+        // Remove any existing status classes
+        counterElement.classList.remove('near-limit', 'over-limit');
+        progressBar.classList.remove('near-limit', 'over-limit');
 
         if (wordCount > 1024) {
-            counterElement.classList.add('limit-exceeded');
+            counterElement.classList.add('over-limit');
+            progressBar.classList.add('over-limit');
+            counterElement.textContent = wordCount + ' words - Exceeds limit!';
             submitButton.disabled = true;
+        } else if (wordCount > 900) {
+            counterElement.classList.add('near-limit');
+            progressBar.classList.add('near-limit');
+            counterElement.textContent = wordCount + ' words - Approaching limit';
+            submitButton.disabled = false;
         } else {
-            counterElement.classList.remove('limit-exceeded');
             submitButton.disabled = false;
         }
     }
