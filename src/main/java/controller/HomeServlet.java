@@ -76,6 +76,11 @@ public class HomeServlet extends HttpServlet {
 
     private String callGeminiAPI(String text) {
         try {
+            // Check word count on server side as well
+            String[] words = text.split("\\s+");
+            if (words.length > 1024) {
+                return "Error: Input exceeds 1024 words. Please shorten your text.";
+            }
             String prompt = "Correct the grammar and improve the following text: \"" + text + "\". " +
                     "Return only the corrected text without any additional explanations.";
 
