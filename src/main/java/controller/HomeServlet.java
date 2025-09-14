@@ -15,7 +15,7 @@ import com.google.genai.types.GenerateContentResponse;
 
 @WebServlet("")
 public class HomeServlet extends HttpServlet {
-    private static final String API_KEY = "AIzaSyBhKDWT6qqeNMYSxV7_6s_xptAX1FIjyn0";
+    private static final String API_KEY = "YOUR_API_KEY";
     private Client client;
 
     @Override
