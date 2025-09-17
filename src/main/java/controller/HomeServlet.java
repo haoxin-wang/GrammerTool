@@ -13,15 +13,23 @@ import java.time.LocalDateTime;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 
-@WebServlet("")
+@WebServlet({"","/","/home"})
 public class HomeServlet extends HttpServlet {
-    private static final String API_KEY = "YOUR_API_KEY";
+    private String API_KEY;
     private Client client;
 
     @Override
     public void init() throws ServletException {
         super.init();
         // Initialize the client once when the servlet is created
+        API_KEY = System.getenv("GEMINI_API_KEY");
+        // If not found in environment, try system property (for local testing)
+        if (API_KEY == null || API_KEY.trim().isEmpty()) {
+            API_KEY = System.getProperty("GEMINI_API_KEY");
+        }
+        if (API_KEY == null || API_KEY.trim().isEmpty()) {
+            throw new ServletException("GEMINI_API_KEY environment variable is not set.");
+        }
         client = Client.builder().apiKey(API_KEY).build();
     }
 
